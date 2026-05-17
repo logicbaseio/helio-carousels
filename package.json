@@ -1,0 +1,14 @@
+{
+  "name": "helio-carousel-pipeline",
+  "version": "1.0.0",
+  "description": "HELIO autonomous Instagram carousel pipeline",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/pipeline.js",
+    "test": "CUSTOM_TOPIC='Test run - what is AEO' node scripts/pipeline.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "puppeteer": "^21.0.0"
+  }
+}
