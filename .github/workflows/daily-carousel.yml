@@ -1,9 +1,3 @@
-# ============================================================
-# HELIO — Daily Carousel Pipeline
-# SAVE THIS FILE TO: .github/workflows/daily-carousel.yml
-# (Create the .github/workflows/ folder manually in your repo)
-# ============================================================
-
 name: HELIO Daily Carousel
 
 on:
@@ -31,13 +25,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
       - name: Install dependencies
         run: npm install
-
-      - name: Install Chromium
-        run: npx puppeteer browsers install chrome
 
       - name: Run HELIO pipeline
         env:
@@ -48,6 +43,7 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           STORAGE_BUCKET:       ${{ secrets.STORAGE_BUCKET }}
           CUSTOM_TOPIC:         ${{ github.event.inputs.topic }}
+          CHROME_PATH:          /usr/bin/google-chrome-stable
         run: node scripts/pipeline.js
 
       - name: Upload slide artifacts
