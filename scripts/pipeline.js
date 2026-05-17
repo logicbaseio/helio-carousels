@@ -3,7 +3,7 @@
 // scripts/pipeline.js
 // ============================================================
 
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
@@ -20,6 +20,7 @@ const {
   SUPABASE_SERVICE_KEY,
   STORAGE_BUCKET = "helio-carousels",
   CUSTOM_TOPIC = "",
+  CHROME_PATH = "/usr/bin/google-chrome-stable",
 } = process.env;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -133,12 +134,11 @@ async function generateCarousel(topic) {
     })
   });
 
-  if (!res.ok) throw new Error(`Claude API error: ${res.status}`);
+  if (!res.ok) throw new Error(`Claude API error: ${res.status} ${await res.text()}`);
 
-  const data = await res.json();
-  const raw = data.content?.[0]?.text || "";
+  const data  = await res.json();
+  const raw   = data.content?.[0]?.text || "";
   const clean = raw.replace(/```json|```/g, "").trim();
-
   const carousel = JSON.parse(clean);
   console.log(`✅ Generated ${carousel.slides.length} slides`);
   return carousel;
@@ -163,13 +163,12 @@ function buildSlideHTML(slide, total, idx) {
   const isFirst = slide.slide_number === 1;
   const hasLBar = isDark && !isFirst;
   const hasTBar = !isDark;
-
-  const lines = (slide.headline || "").split("\\n");
-  const hlSize = isFirst ? 48 : 38;
+  const lines   = (slide.headline || "").split("\\n");
+  const hlSize  = isFirst ? 48 : 38;
 
   const dotsHTML = Array.from({ length: total }).map((_, i) => {
     const active = i === idx;
-    const w = active ? "18px" : "7px";
+    const w   = active ? "18px" : "7px";
     const bg2 = active ? accent : (isDark ? "rgba(200,255,0,0.18)" : "rgba(0,0,0,0.18)");
     return `<div style="height:7px;width:${w};border-radius:${active ? "3px" : "50%"};background:${bg2};"></div>`;
   }).join("");
@@ -177,7 +176,7 @@ function buildSlideHTML(slide, total, idx) {
   const listHTML = (slide.list || []).slice(0, 5).map((item, i) => `
     <div style="display:flex;align-items:baseline;gap:14px;font-size:14px;padding:10px 0;
       border-bottom:1px solid ${listB};color:${sub};">
-      <span style="font-size:10px;font-weight:700;color:${accent};flex-shrink:0;letter-spacing:0.1em;">${String(i + 1).padStart(2, "0")}</span>
+      <span style="font-size:10px;font-weight:700;color:${accent};flex-shrink:0;">${String(i + 1).padStart(2, "0")}</span>
       <span>${item}</span>
     </div>`).join("");
 
@@ -189,8 +188,7 @@ function buildSlideHTML(slide, total, idx) {
     ? `<div style="display:flex;align-items:center;gap:10px;background:${termBg};
         border:1px solid ${termBr};border-radius:2px;padding:12px 16px;
         font-size:12px;color:${termFg};margin-top:auto;">
-        <span style="opacity:0.4;">$</span>
-        <span>${slide.terminal_line}</span>
+        <span style="opacity:0.4;">$</span><span>${slide.terminal_line}</span>
       </div>`
     : "";
 
@@ -207,13 +205,10 @@ function buildSlideHTML(slide, total, idx) {
 <head>
 <meta charset="UTF-8">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
     width:1080px; height:1350px; overflow:hidden;
-    background:${bg};
-    font-family:'JetBrains Mono','Courier New',monospace;
-    position:relative;
+    background:${bg}; font-family:'Courier New',monospace; position:relative;
   }
   .grid {
     position:absolute; inset:0;
@@ -222,24 +217,16 @@ function buildSlideHTML(slide, total, idx) {
       linear-gradient(90deg,${gridC} 1px,transparent 1px);
     background-size:60px 60px;
   }
-  .scanline {
-    position:absolute; inset:0; pointer-events:none;
-    background:repeating-linear-gradient(
-      to bottom,transparent 0px,transparent 5px,
-      rgba(0,0,0,0.03) 5px,rgba(0,0,0,0.03) 6px
-    );
-  }
   .bnum {
     position:absolute; right:-20px; bottom:-80px;
     font-size:420px; font-weight:800; line-height:1;
     color:${isDark ? "rgba(200,255,0,0.04)" : "rgba(0,0,0,0.05)"};
-    letter-spacing:-0.05em; pointer-events:none; user-select:none; z-index:1;
+    letter-spacing:-0.05em; z-index:1;
   }
 </style>
 </head>
 <body>
   <div class="grid"></div>
-  <div class="scanline"></div>
   <div class="bnum">${String(slide.slide_number).padStart(2, "0")}</div>
 
   ${hasLBar ? `<div style="position:absolute;top:92px;bottom:80px;left:0;width:8px;background:#C8FF00;z-index:5;"></div>` : ""}
@@ -250,29 +237,24 @@ function buildSlideHTML(slide, total, idx) {
     padding:0 48px;border-bottom:1px solid ${bordC};background:${bg};">
     <span style="font-size:28px;font-weight:800;letter-spacing:0.18em;color:${accent};">HELIO</span>
     <span style="font-size:15px;letter-spacing:0.18em;color:${eyeC};">
-      ${isFirst ? "AGENT ONLINE" : `SLIDE ${String(slide.slide_number).padStart(2, "00")} OF ${String(total).padStart(2, "00")}`}
+      ${isFirst ? "AGENT ONLINE" : `SLIDE ${String(slide.slide_number).padStart(2, "0")} OF ${String(total).padStart(2, "0")}`}
     </span>
   </div>
 
   <div style="position:absolute;
-    top:${hasTBar ? "110px" : "92px"};
-    bottom:80px;
-    left:${hasLBar ? "60px" : "48px"};
-    right:48px;
-    z-index:10;
-    display:flex;
-    flex-direction:column;
+    top:${hasTBar ? "110px" : "92px"};bottom:80px;
+    left:${hasLBar ? "60px" : "48px"};right:48px;
+    z-index:10;display:flex;flex-direction:column;
     justify-content:${isFirst ? "flex-end" : "flex-start"};
     padding:${isFirst ? "0 0 48px" : "36px 0 0"};">
 
-    ${slide.eyebrow ? `<div style="font-size:15px;font-weight:600;letter-spacing:0.25em;text-transform:uppercase;color:${eyeC};margin-bottom:20px;">${slide.eyebrow}</div>` : ""}
+    ${slide.eyebrow ? `<div style="font-size:15px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:${eyeC};margin-bottom:20px;">${slide.eyebrow}</div>` : ""}
 
     <div style="font-size:${hlSize}px;font-weight:800;line-height:1.1;letter-spacing:-0.02em;color:${fg};margin-bottom:${isFirst ? "24px" : "20px"};">
       ${lines.map(l => `<div>${l}</div>`).join("")}
     </div>
 
     ${isFirst ? `<div style="height:1px;background:${isDark ? "rgba(200,255,0,0.14)" : "rgba(0,0,0,0.14)"};margin-bottom:24px;"></div>` : ""}
-
     ${bodyHTML}
     ${listHTML ? `<div style="margin-bottom:14px;">${listHTML}</div>` : ""}
     ${termHTML}
@@ -289,16 +271,18 @@ function buildSlideHTML(slide, total, idx) {
 </html>`;
 }
 
-// ── STEP 4: RENDER SLIDES TO JPG VIA PUPPETEER ────────────
+// ── STEP 4: RENDER SLIDES TO JPG ─────────────────────────
 async function renderSlides(carousel) {
-  console.log("🎨 Launching Puppeteer...");
+  console.log("🎨 Launching Puppeteer with system Chrome...");
   const browser = await puppeteer.launch({
-    headless: "new",
+    executablePath: CHROME_PATH,
+    headless: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--window-size=1080,1350",
     ],
   });
 
@@ -311,9 +295,9 @@ async function renderSlides(carousel) {
 
   for (let i = 0; i < carousel.slides.length; i++) {
     const slide = carousel.slides[i];
-    const html = buildSlideHTML(slide, carousel.slides.length, i);
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await new Promise(r => setTimeout(r, 800));
+    const html  = buildSlideHTML(slide, carousel.slides.length, i);
+    await page.setContent(html, { waitUntil: "domcontentloaded" });
+    await new Promise(r => setTimeout(r, 500));
 
     const filePath = path.join(outputDir, `slide-${i + 1}.jpg`);
     await page.screenshot({
@@ -332,13 +316,13 @@ async function renderSlides(carousel) {
   return filePaths;
 }
 
-// ── STEP 5: UPLOAD TO SUPABASE STORAGE ────────────────────
+// ── STEP 5: UPLOAD TO SUPABASE ────────────────────────────
 async function uploadSlides(filePaths, timestamp) {
   console.log("☁️  Uploading to Supabase Storage...");
   const publicUrls = [];
 
   for (let i = 0; i < filePaths.length; i++) {
-    const file = fs.readFileSync(filePaths[i]);
+    const file     = fs.readFileSync(filePaths[i]);
     const fileName = `carousel-${timestamp}/slide-${i + 1}.jpg`;
 
     const { error } = await supabase.storage
@@ -364,11 +348,11 @@ async function postToInstagram(imageUrls, caption) {
   const containerIds = [];
   for (let i = 0; i < imageUrls.length; i++) {
     const params = new URLSearchParams({
-      image_url: imageUrls[i],
+      image_url:        imageUrls[i],
       is_carousel_item: "true",
-      access_token: IG_ACCESS_TOKEN,
+      access_token:     IG_ACCESS_TOKEN,
     });
-    const res = await fetch(`${base}/media`, { method: "POST", body: params });
+    const res  = await fetch(`${base}/media`, { method: "POST", body: params });
     const data = await res.json();
     if (!data.id) throw new Error(`Container ${i + 1} failed: ${JSON.stringify(data)}`);
     containerIds.push(data.id);
@@ -377,12 +361,12 @@ async function postToInstagram(imageUrls, caption) {
   }
 
   const carouselParams = new URLSearchParams({
-    media_type: "CAROUSEL",
-    children: containerIds.join(","),
+    media_type:   "CAROUSEL",
+    children:     containerIds.join(","),
     caption,
     access_token: IG_ACCESS_TOKEN,
   });
-  const carRes = await fetch(`${base}/media`, { method: "POST", body: carouselParams });
+  const carRes  = await fetch(`${base}/media`, { method: "POST", body: carouselParams });
   const carData = await carRes.json();
   if (!carData.id) throw new Error(`Carousel container failed: ${JSON.stringify(carData)}`);
   console.log(`  Carousel container: ${carData.id}`);
@@ -390,10 +374,10 @@ async function postToInstagram(imageUrls, caption) {
   await new Promise(r => setTimeout(r, 5000));
 
   const pubParams = new URLSearchParams({
-    creation_id: carData.id,
+    creation_id:  carData.id,
     access_token: IG_ACCESS_TOKEN,
   });
-  const pubRes = await fetch(`${base}/media_publish`, { method: "POST", body: pubParams });
+  const pubRes  = await fetch(`${base}/media_publish`, { method: "POST", body: pubParams });
   const pubData = await pubRes.json();
   if (!pubData.id) throw new Error(`Publish failed: ${JSON.stringify(pubData)}`);
 
@@ -401,7 +385,7 @@ async function postToInstagram(imageUrls, caption) {
   return pubData.id;
 }
 
-// ── STEP 7: LOG TO SUPABASE ───────────────────────────────
+// ── STEP 7: LOG ───────────────────────────────────────────
 async function log(payload) {
   const { error } = await supabase.from("helio_posts").insert(payload);
   if (error) console.error("Log error:", error.message);
@@ -414,11 +398,11 @@ async function main() {
   console.log("══════════════════════════════════════\n");
 
   const timestamp = Date.now();
-  let topicData = { topic: "", topicIndex: -1 };
+  let topicData   = { topic: "", topicIndex: -1 };
 
   try {
-    topicData = await getTodaysTopic();
-    const carousel = await generateCarousel(topicData.topic);
+    topicData       = await getTodaysTopic();
+    const carousel  = await generateCarousel(topicData.topic);
     const filePaths = await renderSlides(carousel);
     const imageUrls = await uploadSlides(filePaths, timestamp);
 
@@ -430,29 +414,28 @@ async function main() {
     const postId = await postToInstagram(imageUrls, caption);
 
     await log({
-      topic: topicData.topic,
+      topic:       topicData.topic,
       topic_index: topicData.topicIndex,
-      post_id: postId,
-      image_urls: imageUrls,
+      post_id:     postId,
+      image_urls:  imageUrls,
       caption,
-      status: "success",
+      status:      "success",
     });
 
     console.log("\n══════════════════════════════════════");
-    console.log("  ✅ MISSION COMPLETE");
-    console.log(`  Post ID: ${postId}`);
+    console.log("  ✅ MISSION COMPLETE — Post ID:", postId);
     console.log("══════════════════════════════════════\n");
 
   } catch (err) {
     console.error("\n❌ PIPELINE FAILED:", err.message);
     await log({
-      topic: topicData.topic || "unknown",
+      topic:       topicData.topic || "unknown",
       topic_index: topicData.topicIndex,
-      post_id: "",
-      image_urls: [],
-      caption: "",
-      status: "error",
-      error: err.message,
+      post_id:     "",
+      image_urls:  [],
+      caption:     "",
+      status:      "error",
+      error:       err.message,
     });
     process.exit(1);
   }
