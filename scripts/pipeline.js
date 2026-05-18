@@ -137,152 +137,166 @@ async function generateCarousel(topic) {
   return carousel;
 }
 
-// ── STEP 3: BUILD FULL-QUALITY SLIDE HTML ─────────────────
+// ── STEP 3: BUILD SLIDE HTML ──────────────────────────────
+// NOTE: No external font imports — uses system monospace only
+// This prevents navigation timeout on GitHub Actions runners
 function buildSlideHTML(slide, total, idx) {
   const isDark  = slide.theme === "dark";
   const bg      = isDark ? "#080808" : "#C8FF00";
   const fg      = isDark ? "#FFFFFF" : "#080808";
   const accent  = isDark ? "#C8FF00" : "#080808";
-  const sub     = isDark ? "rgba(255,255,255,0.42)" : "rgba(0,0,0,0.60)";
-  const eyeC    = isDark ? "rgba(200,255,0,0.55)"   : "rgba(0,0,0,0.48)";
-  const gridC   = isDark ? "rgba(200,255,0,0.04)"   : "rgba(0,0,0,0.07)";
-  const urlC    = isDark ? "rgba(200,255,0,0.28)"   : "rgba(0,0,0,0.32)";
-  const bordC   = isDark ? "rgba(200,255,0,0.12)"   : "rgba(0,0,0,0.14)";
-  const listBC  = isDark ? "rgba(200,255,0,0.09)"   : "rgba(0,0,0,0.09)";
-  const ruleBg  = isDark ? "rgba(200,255,0,0.14)"   : "rgba(0,0,0,0.14)";
-  const bnumC   = isDark ? "rgba(200,255,0,0.04)"   : "rgba(0,0,0,0.05)";
+  const sub     = isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.62)";
+  const eyeC    = isDark ? "rgba(200,255,0,0.58)"   : "rgba(0,0,0,0.50)";
+  const gridC   = isDark ? "rgba(200,255,0,0.05)"   : "rgba(0,0,0,0.08)";
+  const urlC    = isDark ? "rgba(200,255,0,0.30)"   : "rgba(0,0,0,0.34)";
+  const bordC   = isDark ? "rgba(200,255,0,0.14)"   : "rgba(0,0,0,0.16)";
+  const listBC  = isDark ? "rgba(200,255,0,0.10)"   : "rgba(0,0,0,0.10)";
+  const ruleBg  = isDark ? "rgba(200,255,0,0.16)"   : "rgba(0,0,0,0.16)";
+  const bnumC   = isDark ? "rgba(200,255,0,0.045)"  : "rgba(0,0,0,0.055)";
   const termBg  = isDark ? "rgba(200,255,0,0.06)"   : "transparent";
-  const termBr  = isDark ? "rgba(200,255,0,0.15)"   : "transparent";
-  const termFg  = isDark ? "rgba(200,255,0,0.65)"   : "transparent";
+  const termBr  = isDark ? "rgba(200,255,0,0.18)"   : "transparent";
+  const termFg  = isDark ? "rgba(200,255,0,0.68)"   : "transparent";
 
   const isFirst = slide.slide_number === 1;
   const hasLBar = isDark && !isFirst;
   const hasTBar = !isDark;
   const lines   = (slide.headline || "").split("\\n");
-  const hlPx    = isFirst ? 88 : 68;
-  const lhPx    = hlPx * 1.12;
+  const hlPx    = isFirst ? 86 : 66;
+  const lhPx    = Math.round(hlPx * 1.14);
 
-  // progress dots
+  // Progress dots
   const dots = Array.from({ length: total }).map((_, i) => {
     const on  = i === idx;
     const w   = on ? 36 : 14;
-    const bgD = on ? accent : (isDark ? "rgba(200,255,0,0.2)" : "rgba(0,0,0,0.2)");
-    return `<div style="height:12px;width:${w}px;border-radius:${on ? 6 : 7}px;background:${bgD};transition:all 0.3s;"></div>`;
+    const bgD = on ? accent : (isDark ? "rgba(200,255,0,0.22)" : "rgba(0,0,0,0.22)");
+    return `<div style="height:12px;width:${w}px;border-radius:${on ? 6 : 7}px;background:${bgD};flex-shrink:0;"></div>`;
   }).join("");
 
-  // list rows
+  // List rows
   const listRows = (slide.list || []).slice(0, 5).map((item, i) => `
-    <div style="display:flex;align-items:flex-start;gap:28px;padding:18px 0;border-bottom:1px solid ${listBC};">
-      <span style="font-size:20px;font-weight:800;color:${accent};flex-shrink:0;letter-spacing:0.08em;margin-top:2px;">${String(i + 1).padStart(2, "0")}</span>
-      <span style="font-size:28px;line-height:1.45;color:${sub};font-weight:400;">${item}</span>
+    <div style="display:flex;align-items:flex-start;gap:28px;padding:20px 0;
+      border-bottom:1px solid ${listBC};">
+      <span style="font-size:22px;font-weight:700;color:${accent};
+        flex-shrink:0;letter-spacing:0.06em;padding-top:3px;">
+        ${String(i + 1).padStart(2, "0")}
+      </span>
+      <span style="font-size:28px;line-height:1.5;color:${sub};font-weight:400;">
+        ${item}
+      </span>
     </div>`).join("");
 
-  // body
+  // Body block
   const bodyBlock = slide.body
-    ? `<p style="font-size:28px;line-height:1.75;color:${sub};margin:0 0 36px;font-weight:400;">${slide.body}</p>`
+    ? `<p style="font-size:28px;line-height:1.78;color:${sub};
+        margin:0 0 40px;font-weight:400;">${slide.body}</p>`
     : "";
 
-  // terminal
+  // Terminal line — pinned above bottom bar
   const termBlock = (slide.terminal_line && isDark)
-    ? `<div style="position:absolute;bottom:110px;left:${hasLBar ? 60 : 48}px;right:48px;
-        display:flex;align-items:center;gap:18px;
-        background:${termBg};border:1px solid ${termBr};border-radius:4px;
-        padding:22px 28px;z-index:15;">
-        <span style="font-size:22px;color:rgba(200,255,0,0.4);font-weight:400;">$</span>
-        <span style="font-size:22px;color:${termFg};font-weight:400;letter-spacing:0.04em;">${slide.terminal_line}</span>
+    ? `<div style="position:absolute;
+        bottom:104px;
+        left:${hasLBar ? 58 : 48}px;
+        right:48px;
+        display:flex;align-items:center;gap:20px;
+        background:${termBg};border:1px solid ${termBr};
+        border-radius:4px;padding:22px 30px;z-index:15;">
+        <span style="font-size:22px;color:rgba(200,255,0,0.42);font-weight:400;">$</span>
+        <span style="font-size:22px;color:${termFg};font-weight:400;
+          letter-spacing:0.04em;">${slide.terminal_line}</span>
       </div>`
     : "";
 
-  // CTA button slide 8
+  // CTA button — slide 8
   const ctaBlock = slide.slide_number === 8
-    ? `<div style="display:inline-block;margin-top:40px;padding:28px 52px;
-        background:${fg};color:${bg};
+    ? `<div style="display:inline-block;margin-top:44px;
+        padding:30px 56px;background:${fg};color:${bg};
         font-size:24px;font-weight:800;letter-spacing:0.16em;
         text-transform:uppercase;border-radius:4px;">
         JOIN WAITLIST → HELIO.BOT
       </div>`
     : "";
 
-  // stat pills (if body has numbers we keep body, no special treatment needed)
-
-  // content top position
-  const contentTop  = hasTBar ? 110 : 92;
-  const contentLeft = hasLBar ? 60  : 48;
-
-  // for cover slide, content anchors to bottom
-  const coverStyle  = isFirst
-    ? `bottom:110px;justify-content:flex-end;padding-bottom:0;`
-    : `top:${contentTop + 40}px;`;
+  // Content positioning
+  const contentLeft  = hasLBar ? 58 : 48;
+  const contentTop   = hasTBar ? 120 : 100;
 
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html, body { width:1080px; height:1350px; overflow:hidden; }
-  body {
+  html, body {
+    width:1080px; height:1350px; overflow:hidden;
     background:${bg};
-    font-family:'JetBrains Mono','Courier New',monospace;
+    /* System monospace stack — no external requests, renders instantly */
+    font-family: 'Courier New', Courier, monospace;
     position:relative;
   }
+
+  /* Grid background */
   .grid {
-    position:absolute;inset:0;z-index:0;pointer-events:none;
+    position:absolute; inset:0; z-index:0; pointer-events:none;
     background-image:
       linear-gradient(${gridC} 1px, transparent 1px),
       linear-gradient(90deg, ${gridC} 1px, transparent 1px);
     background-size:54px 54px;
   }
-  .scanline {
-    position:absolute;inset:0;z-index:1;pointer-events:none;
+
+  /* Subtle scanline */
+  .scan {
+    position:absolute; inset:0; z-index:1; pointer-events:none;
     background:repeating-linear-gradient(
-      to bottom,transparent 0,transparent 4px,
-      rgba(0,0,0,0.025) 4px,rgba(0,0,0,0.025) 5px);
+      to bottom,
+      transparent 0px, transparent 4px,
+      rgba(0,0,0,0.022) 4px, rgba(0,0,0,0.022) 5px
+    );
   }
+
+  /* Ghost slide number */
   .bnum {
-    position:absolute;right:-10px;bottom:-60px;
-    font-size:480px;font-weight:800;line-height:1;
-    color:${bnumC};letter-spacing:-0.05em;
-    z-index:2;pointer-events:none;user-select:none;
+    position:absolute; right:-8px; bottom:-50px;
+    font-size:500px; font-weight:700; line-height:1;
+    color:${bnumC}; letter-spacing:-0.05em;
+    z-index:2; pointer-events:none; user-select:none;
   }
+
+  /* Accent bars */
+  .lbar { position:absolute; top:92px; bottom:92px; left:0; width:10px; background:#C8FF00; z-index:6; }
+  .tbar { position:absolute; top:92px; left:0; right:0; height:10px; background:#080808; z-index:6; }
+
+  /* Top bar */
   .topbar {
-    position:absolute;top:0;left:0;right:0;height:92px;
-    display:flex;align-items:center;justify-content:space-between;
-    padding:0 48px;z-index:20;background:${bg};
+    position:absolute; top:0; left:0; right:0; height:92px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 48px; z-index:20; background:${bg};
     border-bottom:1px solid ${bordC};
   }
+
+  /* Bottom bar */
   .botbar {
-    position:absolute;bottom:0;left:0;right:0;height:92px;
-    display:flex;align-items:center;justify-content:space-between;
-    padding:0 48px;z-index:20;background:${bg};
+    position:absolute; bottom:0; left:0; right:0; height:92px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 48px; z-index:20; background:${bg};
     border-top:1px solid ${bordC};
   }
-  .lbar { position:absolute;top:92px;bottom:92px;left:0;width:10px;background:#C8FF00;z-index:5; }
-  .tbar { position:absolute;top:92px;left:0;right:0;height:10px;background:#080808;z-index:5; }
+
+  /* Main content wrapper */
   .content {
     position:absolute;
-    left:${contentLeft}px;right:48px;
-    z-index:10;display:flex;flex-direction:column;
-    ${coverStyle}
+    left:${contentLeft}px; right:48px;
+    z-index:10;
+    display:flex; flex-direction:column;
+    ${isFirst
+      ? `bottom:104px; justify-content:flex-end;`
+      : `top:${contentTop}px;`
+    }
   }
-  .eyebrow {
-    font-size:20px;font-weight:600;letter-spacing:0.22em;
-    text-transform:uppercase;color:${eyeC};margin-bottom:24px;
-  }
-  .headline {
-    font-size:${hlPx}px;font-weight:800;
-    line-height:${lhPx}px;letter-spacing:-0.025em;color:${fg};
-    margin-bottom:${isFirst ? 36 : 28}px;
-  }
-  .rule { height:1px;background:${ruleBg};margin-bottom:36px; }
-  .body { font-size:28px;line-height:1.75;color:${sub};margin-bottom:36px;font-weight:400; }
-  .list { display:flex;flex-direction:column;margin-bottom:36px; }
 </style>
 </head>
 <body>
   <div class="grid"></div>
-  <div class="scanline"></div>
+  <div class="scan"></div>
   <div class="bnum">${String(slide.slide_number).padStart(2, "0")}</div>
 
   ${hasLBar ? '<div class="lbar"></div>' : ""}
@@ -290,27 +304,43 @@ function buildSlideHTML(slide, total, idx) {
 
   <!-- TOP BAR -->
   <div class="topbar">
-    <span style="font-size:32px;font-weight:800;letter-spacing:0.16em;color:${accent};">HELIO</span>
+    <span style="font-size:34px;font-weight:700;letter-spacing:0.16em;color:${accent};">
+      HELIO
+    </span>
     <span style="font-size:18px;font-weight:500;letter-spacing:0.18em;color:${eyeC};">
-      ${isFirst ? "AGENT ONLINE" : `SLIDE ${String(slide.slide_number).padStart(2, "0")} OF ${String(total).padStart(2, "0")}`}
+      ${isFirst
+        ? "AGENT ONLINE"
+        : `SLIDE ${String(slide.slide_number).padStart(2,"0")} OF ${String(total).padStart(2,"0")}`
+      }
     </span>
   </div>
 
   <!-- CONTENT -->
-  <div class="content" ${isFirst ? "" : `style="top:${contentTop + 40}px;"`}>
-    ${slide.eyebrow ? `<div class="eyebrow">${slide.eyebrow.toUpperCase()}</div>` : ""}
+  <div class="content">
 
-    <div class="headline">
+    ${slide.eyebrow ? `
+      <div style="font-size:20px;font-weight:600;letter-spacing:0.24em;
+        text-transform:uppercase;color:${eyeC};margin-bottom:26px;">
+        ${slide.eyebrow.toUpperCase()}
+      </div>` : ""}
+
+    <div style="font-size:${hlPx}px;font-weight:700;
+      line-height:${lhPx}px;letter-spacing:-0.022em;
+      color:${fg};margin-bottom:${isFirst ? 38 : 30}px;">
       ${lines.map(l => `<div>${l}</div>`).join("")}
     </div>
 
-    ${isFirst ? '<div class="rule"></div>' : ""}
+    ${isFirst ? `<div style="height:1px;background:${ruleBg};margin-bottom:38px;"></div>` : ""}
+
     ${bodyBlock}
-    ${listRows ? `<div class="list">${listRows}</div>` : ""}
+
+    ${listRows ? `<div style="display:flex;flex-direction:column;margin-bottom:40px;">${listRows}</div>` : ""}
+
     ${ctaBlock}
+
   </div>
 
-  <!-- TERMINAL (dark slides only) -->
+  <!-- TERMINAL LINE (dark slides) -->
   ${termBlock}
 
   <!-- BOTTOM BAR -->
@@ -318,6 +348,7 @@ function buildSlideHTML(slide, total, idx) {
     <span style="font-size:18px;letter-spacing:0.18em;color:${urlC};">helio.bot</span>
     <div style="display:flex;gap:10px;align-items:center;">${dots}</div>
   </div>
+
 </body>
 </html>`;
 }
@@ -328,7 +359,13 @@ async function renderSlides(carousel) {
   const browser = await puppeteer.launch({
     executablePath: CHROME_PATH,
     headless: true,
-    args: ["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-web-security",
+    ],
   });
 
   const outputDir = path.join(__dirname, "..", "output");
@@ -337,15 +374,39 @@ async function renderSlides(carousel) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 2 });
 
+  // Block all external network requests to prevent timeouts
+  await page.setRequestInterception(true);
+  page.on("request", (req) => {
+    const url = req.url();
+    // Block fonts, analytics, external scripts — allow only data/local
+    if (
+      url.startsWith("https://fonts.googleapis.com") ||
+      url.startsWith("https://fonts.gstatic.com") ||
+      req.resourceType() === "font"
+    ) {
+      req.abort();
+    } else {
+      req.continue();
+    }
+  });
+
   const filePaths = [];
+
   for (let i = 0; i < carousel.slides.length; i++) {
     const html = buildSlideHTML(carousel.slides[i], carousel.slides.length, i);
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await new Promise(r => setTimeout(r, 1200)); // wait for Google Fonts
+
+    await page.setContent(html, { waitUntil: "domcontentloaded" });
+    // Brief wait for CSS paint only — no network dependency
+    await new Promise(r => setTimeout(r, 300));
 
     const fp = path.join(outputDir, `slide-${i + 1}.jpg`);
-    await page.screenshot({ path: fp, type: "jpeg", quality: 96,
-      clip: { x: 0, y: 0, width: 1080, height: 1350 } });
+    await page.screenshot({
+      path: fp,
+      type: "jpeg",
+      quality: 96,
+      clip: { x: 0, y: 0, width: 1080, height: 1350 },
+    });
+
     filePaths.push(fp);
     console.log(`  ✅ Slide ${i + 1}/${carousel.slides.length} rendered`);
   }
@@ -359,16 +420,22 @@ async function renderSlides(carousel) {
 async function uploadSlides(filePaths, timestamp) {
   console.log("☁️  Uploading to Supabase...");
   const urls = [];
+
   for (let i = 0; i < filePaths.length; i++) {
     const file     = fs.readFileSync(filePaths[i]);
     const fileName = `carousel-${timestamp}/slide-${i + 1}.jpg`;
-    const { error } = await supabase.storage.from(STORAGE_BUCKET)
+
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
       .upload(fileName, file, { contentType: "image/jpeg", upsert: true });
+
     if (error) throw new Error(`Upload slide ${i + 1}: ${error.message}`);
+
     const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
     urls.push(data.publicUrl);
     console.log(`  ✅ Slide ${i + 1} uploaded`);
   }
+
   console.log("✅ All uploaded");
   return urls;
 }
@@ -380,7 +447,11 @@ async function postToInstagram(imageUrls, caption) {
   const ids  = [];
 
   for (let i = 0; i < imageUrls.length; i++) {
-    const p   = new URLSearchParams({ image_url: imageUrls[i], is_carousel_item: "true", access_token: IG_ACCESS_TOKEN });
+    const p   = new URLSearchParams({
+      image_url:        imageUrls[i],
+      is_carousel_item: "true",
+      access_token:     IG_ACCESS_TOKEN,
+    });
     const res = await fetch(`${base}/media`, { method: "POST", body: p });
     const d   = await res.json();
     if (!d.id) throw new Error(`Container ${i + 1}: ${JSON.stringify(d)}`);
@@ -389,11 +460,16 @@ async function postToInstagram(imageUrls, caption) {
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  const cp  = new URLSearchParams({ media_type: "CAROUSEL", children: ids.join(","), caption, access_token: IG_ACCESS_TOKEN });
+  const cp  = new URLSearchParams({
+    media_type:   "CAROUSEL",
+    children:     ids.join(","),
+    caption,
+    access_token: IG_ACCESS_TOKEN,
+  });
   const cr  = await fetch(`${base}/media`, { method: "POST", body: cp });
   const cd  = await cr.json();
   if (!cd.id) throw new Error(`Carousel container: ${JSON.stringify(cd)}`);
-  console.log(`  Carousel: ${cd.id}`);
+  console.log(`  Carousel container: ${cd.id}`);
 
   await new Promise(r => setTimeout(r, 6000));
 
@@ -421,15 +497,21 @@ async function main() {
   let topicData   = { topic: "", topicIndex: -1 };
 
   try {
-    topicData        = await getTodaysTopic();
-    const carousel   = await generateCarousel(topicData.topic);
-    const filePaths  = await renderSlides(carousel);
-    const imageUrls  = await uploadSlides(filePaths, timestamp);
-    const caption    = `${carousel.caption}\n\n${(carousel.hashtags || []).map(h => `#${h.replace(/^#/, "")}`).join(" ")}`;
-    const postId     = await postToInstagram(imageUrls, caption);
+    topicData       = await getTodaysTopic();
+    const carousel  = await generateCarousel(topicData.topic);
+    const filePaths = await renderSlides(carousel);
+    const imageUrls = await uploadSlides(filePaths, timestamp);
+    const caption   = `${carousel.caption}\n\n${(carousel.hashtags || []).map(h => `#${h.replace(/^#/, "")}`).join(" ")}`;
+    const postId    = await postToInstagram(imageUrls, caption);
 
-    await log({ topic: topicData.topic, topic_index: topicData.topicIndex,
-      post_id: postId, image_urls: imageUrls, caption, status: "success" });
+    await log({
+      topic:       topicData.topic,
+      topic_index: topicData.topicIndex,
+      post_id:     postId,
+      image_urls:  imageUrls,
+      caption,
+      status:      "success",
+    });
 
     console.log("\n══════════════════════════════════════");
     console.log("  ✅ MISSION COMPLETE — Post ID:", postId);
@@ -437,8 +519,15 @@ async function main() {
 
   } catch (err) {
     console.error("\n❌ PIPELINE FAILED:", err.message);
-    await log({ topic: topicData.topic || "unknown", topic_index: topicData.topicIndex,
-      post_id: "", image_urls: [], caption: "", status: "error", error: err.message });
+    await log({
+      topic:       topicData.topic || "unknown",
+      topic_index: topicData.topicIndex,
+      post_id:     "",
+      image_urls:  [],
+      caption:     "",
+      status:      "error",
+      error:       err.message,
+    });
     process.exit(1);
   }
 }
